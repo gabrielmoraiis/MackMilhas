@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>MackMilhas</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+</head>
+
+<body>
+<h1>Mack Milhas</h1>
+
+<table id="tabelaFormulario">
+    <tr> <td>ID:</td> <td><input type="text" id="txtId"></td> </tr>
+    <tr> <td>Origem:</td> <td><input type="text" id="txtOrigem"></td> </tr>
+    <tr> <td>Destino:</td> <td><input type="text" id="txtDestino"></td> </tr>
+    <tr> <td>Data:</td> <td><input type="text" id="txtData"></td> </tr>
+    <tr> <td>Preço:</td> <td><input type="text" id="txtPreco"></td> </tr>
+    <tr><td></td><td>
+        <input type="button" value="Salvar" onclick="salvarPassagem()" id="btnSalvar">
+        <input type="button" value="Apagar" onclick="apagarPassagem()" id="btnApagar">
+        <input type="button" value="Cancelar" onclick="cancelarEdicao()" class="btnCancelar">
+    </td></tr>
+</table>
+
+<table id="tabelaFazerReserva">
+    <tr> <td>Login:</td> <td><input type="text" id="txtLogin"></td> </tr>
+    <tr> <td>Senha:</td> <td><input type="password" id="txtSenha"></td> </tr>
+    <tr><td></td><td>
+        <input type="button" value="Entrar" onclick="fazerLogin()" id="btnEntrar">
+        <input type="button" value="Cancelar" onclick="cancelarEdicao()" class="btnCancelar">
+    </td></tr>
+</table>
+<p style="font-weight:bold" id="paragrafoMensagem"></p>
+<div id="buttons">
+    <input type="button" value="Cadastrar passagem" onclick="novaPassagem()" id="btnNovo">
+    <input type="button" value="Fazer reserva" onclick="fazerReserva()" id="fazerReserva" >
+
+</div>
+<table id="tabelaPassagens">
+    <tr> <th>ID</th> <th>Origem</th> <th>Destino</th> <th>Data</th> <th>Preço</th> <th>Reservar</th> </tr>
+    <tbody id="corpoTabelaPassagens"> </tbody>
+</table>
+
+<script src="rest.js"></script>
+<script>
+    const tabelaPassagens = document.querySelector('#tabelaPassagens');
+    const tabelaFormulario = document.querySelector('#tabelaFormulario');
+    const tabelaFazerReserva = document.querySelector('#tabelaFazerReserva');
+    const corpoTabela = document.querySelector('#corpoTabelaPassagens');
+    const paragrafoMensagem = document.querySelector('#paragrafoMensagem');
+    const txtOrigem= document.querySelector('#txtOrigem');
+    const txtDestino = document.querySelector('#txtDestino');
+    const txtData = document.querySelector('#txtData');
+    const txtPreco = document.querySelector('#txtPreco');
+    const txtId = document.querySelector('#txtId');
+
+    const nome = document.querySelector('#txtLogin');
+    const senha = document.querySelector('#txtSenha');
+
+    const div = document.querySelector('#buttons');
+    const btnNovo = document.querySelector('#btnNovo');
+    const btnSalvar = document.querySelector('#btnSalvar');
+    const btnApagar = document.querySelector('#btnApagar');
+    const btnCancelar = document.querySelector('.btnCancelar');
+    var criandoNovaPassagem = false;
+
+    inicializar();
+
+    function inicializar() {
+        criandoNovaPassagem = false;
+        txtId.value = '';
+        txtOrigem.value = '';
+        txtDestino.value = '';
+        txtData.value = '';
+        txtPreco.value = '';
+        txtId.disabled = true;
+        txtOrigem.disabled = true;
+        txtDestino.disabled = true;
+        txtData.disabled = true;
+        txtPreco.disabled = true;
+
+        btnNovo.disabled = false;
+        btnSalvar.disabled = true;
+        btnApagar.disabled = true;
+        btnCancelar.disabled = true;
+
+        div.style.display = 'inline';
+
+        tabelaFormulario.style.display = 'none';
+        tabelaFazerReserva.style.display = 'none';
+        tabelaPassagens.style.display = 'inline';
+        listarTodasPassagens();
+    }
+
+    function listarTodasPassagens() {
+        const errorHandler = function(error) {
+            paragrafoMensagem.textContent = "Erro ao listar passagens (código " + error.message + ")";
+        }
+        asyncLerPassagem(preencherTabela, errorHandler);
+    }
+
+    function preencherTabela(passagem) {
+        corpoTabela.innerHTML = "";
+        var n = passagem.length;
+        for (var i = 0; i < n; i++) {
+            let p = passagem[i];
+            let linha = corpoTabela.insertRow();
+            let celulaId = linha.insertCell();
+            let celulaOrigem = linha.insertCell();
+            let celulaDestino = linha.insertCell();
+            let celulaData = linha.insertCell();
+            let celulaPreco = linha.insertCell();
+            let celulaReservar = linha.insertCell();
+
+            let alink = document.createElement('a');
+            let reservarBtn = document.createElement('button');
+            alink.textContent = p.id_passagem;
+            reservarBtn.textContent = "Reservar";
+            alink.href = "javascript:void(0)";
+            reservarBtn.href = "javascript:void(0)";
+
+            alink.onclick = function() { selecionarPassagem(p.id_passagem); };
+            reservarBtn.onclick = function() { reservarPassagem(p.id_passagem); };
+
+            celulaId.appendChild(alink);
+            celulaOrigem.textContent = p.origem;
+            celulaDestino.textContent = p.destino;
+            celulaData.textContent = p.data;
+            celulaPreco.textContent = p.preco;
+            celulaReservar.appendChild(reservarBtn);
+        }
+    }
+
+    function selecionarPassagem(id) {
+        criandoNovaPassagem = false;
+        const errorHandler = function(error) {
+            paragrafoMensagem.textContent = "Erro ao selecionar reserva (código " + error.message + ")";
+        }
+        asyncLerPassagemById(id, preencherFormulario, errorHandler);
+    }
+
+
+    function preencherFormulario(passagem) {
+        paragrafoMensagem.textContent = 'Altere e salve os dados da passagem, ou então apague o registro da passagem.'
+        txtId.value = passagem.id_passagem;
+        txtOrigem.value = passagem.origem;
+        txtDestino.value = passagem.destino;
+        txtData.value = passagem.data;
+        txtPreco.value = passagem.preco;
+
+        txtId.disabled = false;
+        txtOrigem.disabled = false;
+        txtDestino.disabled = false;
+        txtData.disabled = false;
+        txtPreco.disabled = false;
+
+        btnNovo.disabled = true;
+        btnSalvar.disabled = false;
+        btnApagar.disabled = false;
+        btnCancelar.disabled = false;
+
+        tabelaFormulario.style.display = 'inline';
+        tabelaPassagens.style.display = 'none';
+    }
+
+    function novaPassagem() {
+
+        paragrafoMensagem.textContent = 'Preencha os dados da nova passagem...';
+        criandoNovaPassagem = true;
+
+        txtId.value = '';
+        txtOrigem.value = '';
+        txtDestino.value = '';
+        txtData.value = '';
+        txtPreco.value = '';
+
+        txtId.disabled = true;
+        txtOrigem.disabled = false;
+        txtDestino.disabled = false;
+        txtData.disabled = false;
+        txtPreco.disabled = false;
+
+
+        buttons.style.display = 'none';
+        btnNovo.disabled = true;
+        btnSalvar.disabled = false;
+        btnApagar.disabled = true;
+        btnCancelar.disabled = false;
+
+        tabelaFormulario.style.display = 'inline';
+        tabelaPassagens.style.display = 'none';
+        tabelaFazerReserva.style.display = 'none';
+    }
+    function fazerReserva() {
+        paragrafoMensagem.textContent = 'Faça o login...';
+
+        txtId.disabled = true;
+        txtOrigem.disabled = false;
+        txtDestino.disabled = false;
+        txtData.disabled = false;
+        txtPreco.disabled = false;
+
+        btnNovo.disabled = true;
+        btnSalvar.disabled = false;
+        btnApagar.disabled = true;
+        btnCancelar.disabled = false;
+
+        buttons.style.display = 'none';
+        tabelaFormulario.style.display = 'none';
+        tabelaPassagens.style.display = 'none';
+        tabelaFazerReserva.style.display = 'inline';
+    }
+
+    function validarDados() {
+        const origem = txtOrigem.value.trim();
+        const destino = txtDestino.value.trim();
+        const data = txtData.value.trim();
+        const preco = txtPreco.value.trim();
+
+        if (origem === '' || destino === '' || data === '' || preco === '') {
+            paragrafoMensagem.textContent = 'Por favor, preencha todos os campos.';
+            return false;
+        }
+
+        const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dataRegex.test(data)) {
+            paragrafoMensagem.textContent = 'Por favor, insira uma data válida no formato YYYY-MM-DD.';
+            return false;
+        }
+
+        
+        const precoRegex = /^\d+(\.\d{1,2})?$/; 
+        if (!precoRegex.test(preco)) {
+            paragrafoMensagem.textContent = 'Por favor, insira um preço válido.';
+            return false;
+        }
+
+        return true;
+    }
+
+    function salvarPassagem() {
+        if (validarDados()) {
+            if (criandoNovaPassagem) {
+                criarPassagem();
+            } else {
+                alterarPassagem();
+            }
+        }
+    }
+
+    function criarPassagem() {
+        const dadosPassagem = {
+            'origem': txtOrigem.value,
+            'destino': txtDestino.value,
+            'data': txtData.value,
+            'preco': txtPreco.value
+        };
+        const errorHandler = function(error) {
+            paragrafoMensagem.textContent = 'Erro ao criar nova passagem (código ' + error.message + ')';
+        }
+        asyncCriarPassagem(dadosPassagem, inicializar, errorHandler);
+    }
+
+
+    function validarLogin() {
+        const login = nome.value.trim();
+        const senha = txtSenha.value.trim();
+
+        const loginRegex = /^[a-zA-Z]+$/;
+        if (!loginRegex.test(login)) {
+            paragrafoMensagem.textContent = 'Por favor, insira apenas letras no campo de login.';
+            return false;
+        }
+
+        const senhaRegex = /^[a-zA-Z0-9]+$/;
+        if (!senhaRegex.test(senha)) {
+            paragrafoMensagem.textContent = 'Por favor, insira apenas letras e números no campo de senha.';
+            return false;
+        }
+
+        return true;
+    }
+    async function fazerLogin() {
+        try {
+            if (validarLogin()) {
+                const loginResult = await asyncFazerLogin(nome.value, senha.value);
+                if (loginResult) {
+                    tabelaFazerReserva.style.display = 'none'; 
+                    tabelaPassagens.style.display = 'inline'; 
+                    paragrafoMensagem.textContent = "Login realizado com sucesso."
+                } else {
+                    paragrafoMensagem.textContent = 'Login falhou. Por favor, tente novamente.';
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao fazer login:", error);
+            paragrafoMensagem.textContent = 'Ocorreu um erro ao fazer login. Por favor, tente novamente.';
+        }
+    }
+
+
+
+    function alterarPassagem() {
+        const errorHandler = function(error) {
+            paragrafoMensagem.textContent = 'Erro ao alterar passagem (código ' + error.message + ')';
+        }
+        const dadosPassagem = {
+            'id_passagem': txtId.value,
+            'origem': txtOrigem.value,
+            'destino': txtDestino.value,
+            'data': txtData.value,
+            'preco': txtPreco.value
+        };
+        asyncAlterarPassagem(dadosPassagem, inicializar, errorHandler);
+    }
+
+    function cancelarEdicao() {
+            inicializar();
+    }
+
+    function apagarPassagem() {
+        const id = txtId.value;
+                const errorHandler = function(error) {
+                    paragrafoMensagem.textContent = 'Erro ao apagar passagem (código ' + error.message + ')';
+                }
+        asyncApagarPassagem(id, inicializar, errorHandler);
+    }
+
+    function reservarPassagem(idPassagem) {
+        const errorHandler = function(error) {
+            paragrafoMensagem.textContent = 'Erro ao reservar passagem (código ' + error.message + ')';
+        };
+        const successHandler = function() {
+            paragrafoMensagem.textContent = 'Reserva realizada com sucesso!';
+        };
+        asyncFazerReserva(idPassagem, successHandler, errorHandler);
+    }
+
+
+</script>
+</body>
+
+</html>
+
+    
